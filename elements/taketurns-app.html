@@ -2,12 +2,19 @@
 <link rel="import" href="../bower_components/font-roboto/roboto.html">
 <link rel="import" href="../bower_components/core-animated-pages/core-animated-pages.html">
 <link rel="import" href="../bower_components/core-animated-pages/transitions/slide-from-right.html">
+<link rel="import" href="../bower_components/core-toolbar/core-toolbar.html">
 <link rel="import" href="page-chooseroom.html">
 <link rel="import" href="page-participate.html">
 
 <polymer-element name="taketurns-app">
 
 <template>
+  <style>
+    core-animated-pages {
+    	height: 100%;
+    	margin-top: 10px;
+    }
+  </style>
   <div layout vertical fit>
     <section start>
       <core-toolbar start>
