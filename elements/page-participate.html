@@ -1,0 +1,44 @@
+<link rel="import" href="../bower_components/core-field/core-field.html">
+<link rel="import" href="../bower_components/core-icons/core-icons.html">
+<link rel="import" href="../bower_components/core-icon/core-icon.html">
+
+<polymer-element name="page-participate">
+
+<template>
+  <style>
+    core-field {
+    	border: 1px solid #ddd;
+      height: 40px;
+    }
+  </style>
+  <core-field>
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Roomname: {{roomname}}</label>
+  </core-field>
+  <core-field>
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Status: {{status}}</label>
+  </core-field>
+  <core-field>
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Your Username: {{username}}</label>
+  </core-field>
+</template>
+
+<script src="http://freedomjs.org/dist/freedom/v0.6.11/freedom.v0.6.11.js"></script>
+<script>
+  /**
+  freedom("manifest.json", {}).then(function(TakeTurns) {
+  	console.log("freedom.js module created");
+  });
+  **/
+  Polymer({
+  	roomname: window.location.hash,
+    status: "Connecting...",
+    username: "Unknown",
+    ready: function() {
+    }
+  });
+</script>
+
+</polymer-element>

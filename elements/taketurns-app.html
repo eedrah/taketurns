@@ -3,33 +3,31 @@
 <link rel="import" href="../bower_components/core-animated-pages/core-animated-pages.html">
 <link rel="import" href="../bower_components/core-animated-pages/transitions/slide-from-right.html">
 <link rel="import" href="page-chooseroom.html">
+<link rel="import" href="page-participate.html">
 
 <polymer-element name="taketurns-app">
 
 <template>
-  <div layout horizontal center-center fit>
+  <div layout vertical fit>
+    <section start>
+      <core-toolbar start>
+        <core-icon icon="question-answer"></core-icon>
+        <div flex>Take Turns, Sally.</div>
+      </core-toolbar>
+    </section>
+
     <core-animated-pages  selected="{{selected}}" transitions="slide-from-right">
-      <section layout vertical center-center>
+      <section>
         <page-chooseroom></page-chooseroom>
       </section>
-      <section layout vertical center-center>
-        <div>page</div>
+      <section>
+        <page-participate></page-participate>
       </section>
     </core-animated-pages>
   </div>
 </template>
 
-<!--
-<script src="http://freedomjs.org/dist/freedom/v0.6.11/freedom.v0.6.11.js"></script>
--->
 <script>
-  // Remove the leading '#'
-  
-  /**
-  freedom("manifest.json", {}).then(function(TakeTurns) {
-  	console.log("freedom.js module created");
-  });
-  **/
   Polymer({
   	selected: 0,
     ready: function() {
@@ -37,7 +35,7 @@
       if (hash && hash.length && hash.length > 0) {
       	this.selected = 1;
       } else {
-        
+        this.selected = 0;
       }
     },
   });
