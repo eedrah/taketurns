@@ -44,11 +44,9 @@
 
 <script src="../external/freedom.js"></script>
 <script>
-  /**
-  freedom("manifest.json", {}).then(function(TakeTurns) {
+  freedom("../manifest.json", {}).then(function(TakeTurns) {
   	console.log("freedom.js module created");
   });
-  **/
   Polymer({
   	roomname: window.location.hash,
     status: "Connecting...",

@@ -14,7 +14,7 @@
   </style>
 
   <core-field>
-    <input id="roomname" placeholder="Enter a Room Name" flex three>
+    <input id="roomname" placeholder="Enter a Room Name" flex autofocus>
     <core-icon-button id="proceed" icon="arrow-forward"></core-icon-button>
   </core-field>
 </template>
@@ -22,6 +22,7 @@
 <script>
   Polymer({
     ready: function() {
+    	this.$.roomname.focus();
       this.$.roomname.onkeyup = function(e) {
       	// Enter key
         if (e.keyCode == 13 && this.$.roomname.value.length > 0) {
