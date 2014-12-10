@@ -1,0 +1,25 @@
+{
+  "name": "Take Turns",
+  "description": "Raise your hand if you want to speak",
+  "app": {
+    "script": [ "freedom/main.js" ],
+    "index": "index.html",
+    "static": [ 
+      "css/main.css"
+    ]
+  },
+  "dependencies": {
+    "socialprovider": {
+      "url": "bower_components/freedom/providers/social/websocket-server/social.ws.json",
+      "api": "social"
+    }
+  },
+  "provides": ["taketurns"],
+  "default": "taketurns",
+  "api": {
+    "taketurns": {
+      "send": {"type": "method", "value": ["string", "string"]},
+      "recv-err": {"type": "event", "value": {"message": "string"}}
+    }
+  }
+}

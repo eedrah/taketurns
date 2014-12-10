@@ -1,0 +1,33 @@
+<link rel="import" href="../bower_components/core-field/core-field.html">
+<link rel="import" href="../bower_components/core-icons/core-icons.html">
+<link rel="import" href="../bower_components/core-icon/core-icon.html">
+
+<polymer-element name="page-chooseroom">
+
+<template>
+  <style>
+    core-field {
+    	border: 1px solid #ddd;
+      height: 40px;
+    }
+  </style>
+  <core-field>
+    <core-icon icon="menu"></core-icon>
+    <input id="roomname" placeholder="Enter a Room Name" flex three>
+  </core-field>
+</template>
+
+<script>
+  Polymer({
+    ready: function() {
+      this.$.roomname.onkeyup = function(e) {
+      	// Enter key
+        if (e.keyCode == 13) {
+        	window.location = window.location.href + "#" + this.$.roomname.value;
+        }
+      }.bind(this);
+    }
+  });
+</script>
+
+</polymer-element>
