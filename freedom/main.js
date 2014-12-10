@@ -1,7 +1,7 @@
 /*jslint sloppy:true */
 /*globals freedom */
 /**
- * Chat demo backend.
+ * TakeTurns demo backend.
  * Because the Social API provides message passing primitives,
  * this backend simply forwards messages between the front-end and our Social provider
  * Note that you should be able to plug-and-play a variety of social providers
@@ -12,11 +12,11 @@
 // Create a logger for this module.
 // TODO: allow loggers to be made synchronously.
 var logger;
-freedom.core().getLogger('[Chat Backend]').then(function (log) {
+freedom.core().getLogger('[TakeTurns Backend]').then(function (log) {
   logger = log;
 });
 
-var Chat = function (dispatchEvent) {
+var TakeTurns = function (dispatchEvent) {
   this.dispatchEvent = dispatchEvent;
 
   this.userList = {};    //Keep track of the roster
@@ -30,11 +30,11 @@ var Chat = function (dispatchEvent) {
 /** 
  * sent messages should be forwarded to the Social provider.
  **/
-Chat.prototype.send = function (to, message) {
+TakeTurns.prototype.send = function (to, message) {
   return this.social.sendMessage(to, message);
 };
 
-Chat.prototype.boot = function () {
+TakeTurns.prototype.boot = function () {
   this.social.login({
     agent: 'chatdemo',
     version: '0.1',
@@ -100,7 +100,7 @@ Chat.prototype.boot = function () {
   }.bind(this));
 };
 
-Chat.prototype.updateBuddyList = function () {
+TakeTurns.prototype.updateBuddyList = function () {
   // Iterate over our roster and send over user profiles where there is at least 1 client online
   var buddylist = {}, k, userId;
   for (k in this.clientList) {
@@ -114,4 +114,4 @@ Chat.prototype.updateBuddyList = function () {
   this.dispatchEvent('recv-buddylist', buddylist);
 };
 
-freedom().providePromises(Chat);
+freedom().providePromises(TakeTurns);
