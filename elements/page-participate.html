@@ -1,0 +1,61 @@
+<link rel="import" href="../bower_components/core-field/core-field.html">
+<link rel="import" href="../bower_components/core-icons/core-icons.html">
+<link rel="import" href="../bower_components/core-icon/core-icon.html">
+<link rel="import" href="../bower_components/core-header-panel/core-header-panel.html">
+
+<polymer-element name="page-participate">
+
+<template>
+  <style>
+    core-field {
+    	border: 1px solid #ddd;
+      height: 40px;
+    }
+    .core-header {
+    	background: #E8E8E8;
+    }
+    .core-body {
+    	margin-top: 5px;
+    }
+    core-header-panel {
+    	height: 100%;
+      margin-top: 10px;
+    }
+  </style>
+  <core-field>
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Roomname: {{roomname}}</label>
+  </core-field>
+  <core-field>
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Status: {{status}}</label>
+  </core-field>
+  <core-field>
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Your Username: {{username}}</label>
+  </core-field>
+    <core-header-panel flex>
+      <div class="core-header">Queue:</div>
+      <div class="core-body">
+        Content
+      </div>
+    </core-header-panel>
+</template>
+
+<script src="../external/freedom.js"></script>
+<script>
+  /**
+  freedom("manifest.json", {}).then(function(TakeTurns) {
+  	console.log("freedom.js module created");
+  });
+  **/
+  Polymer({
+  	roomname: window.location.hash,
+    status: "Connecting...",
+    username: "Unknown",
+    ready: function() {
+    }
+  });
+</script>
+
+</polymer-element>

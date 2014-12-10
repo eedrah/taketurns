@@ -1,0 +1,51 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/font-roboto/roboto.html">
+<link rel="import" href="../bower_components/core-animated-pages/core-animated-pages.html">
+<link rel="import" href="../bower_components/core-animated-pages/transitions/slide-from-right.html">
+<link rel="import" href="../bower_components/core-toolbar/core-toolbar.html">
+<link rel="import" href="page-chooseroom.html">
+<link rel="import" href="page-participate.html">
+
+<polymer-element name="taketurns-app">
+
+<template>
+  <style>
+    core-animated-pages {
+    	height: 100%;
+    	margin-top: 10px;
+    }
+  </style>
+  <div layout vertical fit>
+    <section start>
+      <core-toolbar start>
+        <core-icon icon="question-answer"></core-icon>
+        <div flex>Take Turns, Sally.</div>
+      </core-toolbar>
+    </section>
+
+    <core-animated-pages  selected="{{selected}}" transitions="slide-from-right">
+      <section>
+        <page-chooseroom></page-chooseroom>
+      </section>
+      <section>
+        <page-participate></page-participate>
+      </section>
+    </core-animated-pages>
+  </div>
+</template>
+
+<script>
+  Polymer({
+  	selected: 0,
+    ready: function() {
+      var hash = window.location.hash;
+      if (hash && hash.length && hash.length > 0) {
+      	this.selected = 1;
+      } else {
+        this.selected = 0;
+      }
+    },
+  });
+</script>
+
+</polymer-element>
