@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "socialprovider": {
-      "url": "bower_components/freedom/providers/social/websocket-server/social.ws.json",
+      "url": "external/social.ws.json",
       "api": "social"
     }
   },
