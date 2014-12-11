@@ -30,20 +30,14 @@ var TakeTurns = function (dispatchEvent, config) {
 
 TakeTurns.prototype.addToQueue = function () {
   if (this._myClientState.status !== this._social.STATUS.ONLINE) {
-    logger.warn("removeFromQueue", "Not online yet");
+    logger.warn("addToQueue", "Not online yet");
     return Promise.reject();
-  };
-
-  for (var i=0; i<this._queue.length; i++) {
-    if (this._queue[i].name == this._nickname) {
-      return Promise.resolve();
-    }
   }
-  this._queue.push({
-    name: this._nickname
-  });
-  this._dispatchEvent('onQueue', this._queue);
-  this._broadcast(JSON.stringify({ queue: this._queue }));
+  if (this._leader === null) {
+    logger.warn("addToQueue:", "Unknown leader");
+    return Promise.reject();
+  }
+  this._social.sendMessage(this._leader, JSON.stringify({ add: this._nickname }))
   return Promise.resolve();
 };
 
@@ -51,27 +45,12 @@ TakeTurns.prototype.removeFromQueue = function () {
   if (this._myClientState.status !== this._social.STATUS.ONLINE) {
     logger.warn("removeFromQueue", "Not online yet");
     return Promise.reject();
-  };
-
-  var newQueue = [];
-  for (var i=0; i<this._queue.length; i++) {
-    if (this._queue[i].name !== this._nickname) {
-      newQueue.push(this._queue[i]);
-    }
   }
-  this._queue = newQueue;
-  this._dispatchEvent('onQueue', this._queue);
-  this._broadcast(JSON.stringify({ queue: this._queue }));
-  return Promise.resolve();
-};
-
-TakeTurns.prototype._broadcast = function(msg) {
-  for(var k in this._clientList) {
-    if (this._clientList.hasOwnProperty(k) &&
-        this._clientList[k].status == this._social.STATUS.ONLINE) {
-      this._social.sendMessage(this._clientList[k].clientId, msg);
-    } 
+  if (this._leader === null) {
+    logger.warn("removeFromQueue:", "Unknown leader");
+    return Promise.reject();
   }
+  this._social.sendMessage(this._leader, JSON.stringify({ remove: this._nickname }))
   return Promise.resolve();
 };
 
@@ -94,8 +73,7 @@ TakeTurns.prototype._boot = function () {
     this._myClientState = ret;
     this._keepalive();
     logger.log("onLogin", this._myClientState);
-    if (ret.status === this._social.STATUS.ONLINE) {
-      this._nickname = ret.clientId;
+    if (this._myClientState.status === this._social.STATUS.ONLINE) {
       this._dispatchEvent('onState', { name: this._nickname, status: "Online" });
     } else {
       this._dispatchEvent('onState', { name: this._nickname, status: "Offline" });
@@ -128,11 +106,19 @@ TakeTurns.prototype._boot = function () {
     }
     //If mine, send to the page
     if (this._myClientState !== null && data.clientId === this._myClientState.clientId) {
+      this._myClientState = data;
       if (data.status === this._social.STATUS.ONLINE) {
         this._dispatchEvent('onState', { name: this._nickname, status: "Online" });
       } else {
         this._dispatchEvent('onState', { name: this._nickname, status: "Offline" });
       }
+    }
+    // Tell everyone if I'm the leader
+    if (data.status === this._social.STATUS.ONLINE &&
+        this._myClientState !== null &&
+        this._myClientState.status === this._social.STATUS.ONLINE &&
+        this._isLeader) {
+      this._social.sendMessage(data.clientId, JSON.stringify({ leader:this._myClientState.clientId }));
     }
     
   }.bind(this));
@@ -142,11 +128,51 @@ TakeTurns.prototype._boot = function () {
   * Just forward it to the outer page
   */
   this._social.on('onMessage', function (data) {
-    console.log(data);
-    logger.debug("Message Received", data);
+    logger.debug("onMessage", data);
+    try {
+      var parsedMsg = JSON.parse(data);
+      if (parsedMsg.leader) {
+        this._leader = parsedMsg.leader;
+      } else if (parsedMsg.add && this._isLeader) {
+        for (var i=0; i<this._queue.length; i++) {
+          if (this._queue[i].name == parsedMsg.add) {
+            return;
+          }
+        }
+        this._queue.push({ name: parsedMsg.add });
+        this._broadcast(JSON.stringify({ queue: this._queue }));
+      } else if (parsedMsg.remove && this._isLeader) {
+        var newQueue = [];
+        for (var i=0; i<this._queue.length; i++) {
+          if (this._queue[i].name !== parsedMsg.remove) {
+            newQueue.push(this._queue[i]);
+          }
+        }
+        this._queue = newQueue;
+        this._broadcast(JSON.stringify({ queue: this._queue }));
+      } else if (parsedMsg.queue) {
+        this._queue = parsedMsg.queue;
+        this._dispatchEvent('onQueue', this._queue);
+      } else if (parsedMsg.ping) {
+        //Ignore
+      } else {
+        logger.warn("onMessage unrecognized message", data);
+      }
+    } catch(e) {
+      logger.error("onMessage", e);
+    }
 
   }.bind(this));
 
+};
+
+TakeTurns.prototype._broadcast = function(msg) {
+  for(var k in this.clientList) {
+    if (this.clientList.hasOwnProperty(k) &&
+        this.clientList[k].status == this.social.STATUS.ONLINE) {
+      this.social.sendMessage(this.clientList[k].clientId, msg);
+    } 
+  }
 };
 
 freedom().providePromises(TakeTurns);
