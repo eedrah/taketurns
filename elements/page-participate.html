@@ -41,7 +41,7 @@
   </core-field>
   <core-field>
     <core-icon icon="chevron-right"></core-icon>
-    <label>Roomname: {{roomname}}</label>
+    <label>Room: {{config.room}}</label>
   </core-field>
   <core-field>
     <core-icon icon="chevron-right"></core-icon>
@@ -61,7 +61,6 @@
   <paper-fab id="fab" icon="{{fabicon}}"></paper-fab>
 </template>
 
-<script src="../external/freedom.js"></script>
 <script>
   var taketurns;
   Polymer({
@@ -76,8 +75,14 @@
     fabicon: "alarm",
     update: function() {
     	// Change Fab
+      var findName = function(arr, name) {
+        for (var i=0; i<arr.length; i++) {
+          if (arr[i].name == name) { return i; }
+        }
+        return -1;
+      };
       if (this.state.status.toLowerCase() !== "online" || 
-          this.queue.indexOf(this.state.name) > 0) {
+          findName(this.queue, this.state.name) > 0) {
       	this.fabcolor = "#F0E118";
       	this.fabicon = "alarm";
         this.$.fab.onclick = function(e) {};
