@@ -1,14 +1,9 @@
 /*jslint sloppy:true */
 /*globals freedom */
+
 /**
  * TakeTurns demo backend.
- * Because the Social API provides message passing primitives,
- * this backend simply forwards messages between the front-end and our Social provider
- * Note that you should be able to plug-and-play a variety of social providers
- * and still have a working demo
- *
  **/
-
 // Create a logger for this module.
 // TODO: allow loggers to be made synchronously.
 var logger;
@@ -16,102 +11,172 @@ freedom.core().getLogger('[TakeTurns Backend]').then(function (log) {
   logger = log;
 });
 
-var TakeTurns = function (dispatchEvent) {
-  this.dispatchEvent = dispatchEvent;
+var TakeTurns = function (dispatchEvent, config) {
+  this._dispatchEvent = dispatchEvent;
+  this._room = config.room;
+  this._nickname = config.nickname;
+  this._isLeader = config.leader;
 
-  this.userList = {};    //Keep track of the roster
-  this.clientList = {};
-  this.myClientState = null;
-  this.social = freedom.socialprovider();
+  this._social = freedom.socialprovider();
+  this._userList = {};    //Keep track of the roster
+  this._clientList = {};
+  this._myClientState = null;
 
-  this.boot();
+  this._leader = null;
+  this._queue = [];
+
+  this._boot();
 };
 
-/** 
- * sent messages should be forwarded to the Social provider.
- **/
-TakeTurns.prototype.send = function (to, message) {
-  return this.social.sendMessage(to, message);
+TakeTurns.prototype.addToQueue = function () {
+  if (this._myClientState.status !== this._social.STATUS.ONLINE) {
+    logger.warn("addToQueue", "Not online yet");
+    return Promise.reject();
+  }
+  if (this._leader === null) {
+    logger.warn("addToQueue:", "Unknown leader");
+    return Promise.reject();
+  }
+  this._social.sendMessage(this._leader, JSON.stringify({ add: this._nickname }))
+  return Promise.resolve();
 };
 
-TakeTurns.prototype.boot = function () {
-  this.social.login({
-    agent: 'chatdemo',
+TakeTurns.prototype.removeFromQueue = function () {
+  if (this._myClientState.status !== this._social.STATUS.ONLINE) {
+    logger.warn("removeFromQueue", "Not online yet");
+    return Promise.reject();
+  }
+  if (this._leader === null) {
+    logger.warn("removeFromQueue:", "Unknown leader");
+    return Promise.reject();
+  }
+  this._social.sendMessage(this._leader, JSON.stringify({ remove: this._nickname }))
+  return Promise.resolve();
+};
+
+TakeTurns.prototype._keepalive = function() {
+  if (this._myClientState && this._myClientState.status &&
+      this._myClientState.status == this._social.STATUS.ONLINE) {
+    this._social.sendMessage(this._myClientState.clientId, JSON.stringify({ ping:true }));
+    setTimeout(this._keepalive.bind(this), 20000);
+  }
+};
+
+TakeTurns.prototype._boot = function () {
+  this._social.login({
+    agent: 'taketurns_'+this._room,
     version: '0.1',
-    url: '',
+    url: 'https://github.com/ryscheng/taketurns',
     interactive: true,
     rememberLogin: false
   }).then(function (ret) {
-    this.myClientState = ret;
-    logger.log("onLogin", this.myClientState);
-    if (ret.status === this.social.STATUS.ONLINE) {
-      this.dispatchEvent('recv-uid', ret.clientId);
-      this.dispatchEvent('recv-status', "online");
+    this._myClientState = ret;
+    this._keepalive();
+    logger.log("onLogin", this._myClientState);
+    if (this._isLeader) {
+      this._leader = this._myClientState.clientId;
+    }
+    if (this._myClientState.status === this._social.STATUS.ONLINE) {
+      this._dispatchEvent('onState', { name: this._nickname, status: "Online" });
     } else {
-      this.dispatchEvent('recv-status', "offline");
+      this._dispatchEvent('onState', { name: this._nickname, status: "Offline" });
     }
   }.bind(this), function (err) {
-    logger.log("Log In Failed", err);
-    this.dispatchEvent("recv-err", err);
+    logger.log("Log In Failed", JSON.stringify(err));
+    this._dispatchEvent("onState", { name: this._nickname, status: "Error" });
   }.bind(this));
 
-  this.updateBuddyList();
-
-  /**
-  * on an 'onMessage' event from the Social provider
-  * Just forward it to the outer page
-  */
-  this.social.on('onMessage', function (data) {
-    logger.info("Message Received", data);
-    this.dispatchEvent('recv-message', data);
-  }.bind(this));
-  
   /**
   * On user profile changes, let's keep track of them
   **/
-  this.social.on('onUserProfile', function (data) {
+  this._social.on('onUserProfile', function (data) {
     //Just save it for now
-    this.userList[data.userId] = data;
-    this.updateBuddyList();
+    this._userList[data.userId] = data;
   }.bind(this));
   
   /**
   * On newly online or offline clients, let's update the roster
   **/
-  this.social.on('onClientState', function (data) {
+  this._social.on('onClientState', function (data) {
     logger.debug("Roster Change", data);
-    if (data.status === this.social.STATUS.OFFLINE) {
-      if (this.clientList.hasOwnProperty(data.clientId)) {
-        delete this.clientList[data.clientId];
+    //Only track non-offline clients
+    if (data.status === this._social.STATUS.OFFLINE) {
+      if (this._clientList.hasOwnProperty(data.clientId)) {
+        delete this._clientList[data.clientId];
       }
-    } else {  //Only track non-offline clients
-      this.clientList[data.clientId] = data;
+    } else {
+      this._clientList[data.clientId] = data;
     }
     //If mine, send to the page
-    if (this.myClientState !== null && data.clientId === this.myClientState.clientId) {
-      if (data.status === this.social.STATUS.ONLINE) {
-        this.dispatchEvent('recv-status', "online");
+    if (this._myClientState !== null && data.clientId === this._myClientState.clientId) {
+      this._myClientState = data;
+      if (data.status === this._social.STATUS.ONLINE) {
+        this._dispatchEvent('onState', { name: this._nickname, status: "Online" });
       } else {
-        this.dispatchEvent('recv-status', "offline");
+        this._dispatchEvent('onState', { name: this._nickname, status: "Offline" });
       }
+    }
+    // Tell everyone if I'm the leader
+    if (data.status === this._social.STATUS.ONLINE &&
+        this._myClientState !== null &&
+        this._myClientState.status === this._social.STATUS.ONLINE &&
+        this._isLeader) {
+      this._social.sendMessage(data.clientId, JSON.stringify({ leader:this._myClientState.clientId }));
     }
     
-    this.updateBuddyList();
   }.bind(this));
+
+  /**
+  * on an 'onMessage' event from the Social provider
+  * Just forward it to the outer page
+  */
+  this._social.on('onMessage', function (data) {
+    logger.debug("onMessage", data);
+    console.log(data.message);
+    try {
+      var parsedMsg = JSON.parse(data.message);
+      if (parsedMsg.leader) {
+        this._leader = parsedMsg.leader;
+      } else if (parsedMsg.add && this._isLeader) {
+        for (var i=0; i<this._queue.length; i++) {
+          if (this._queue[i].name == parsedMsg.add) {
+            return;
+          }
+        }
+        this._queue.push({ name: parsedMsg.add });
+        this._broadcast(JSON.stringify({ queue: this._queue }));
+      } else if (parsedMsg.remove && this._isLeader) {
+        var newQueue = [];
+        for (var i=0; i<this._queue.length; i++) {
+          if (this._queue[i].name !== parsedMsg.remove) {
+            newQueue.push(this._queue[i]);
+          }
+        }
+        this._queue = newQueue;
+        this._broadcast(JSON.stringify({ queue: this._queue }));
+      } else if (parsedMsg.queue) {
+        this._queue = parsedMsg.queue;
+        this._dispatchEvent('onQueue', this._queue);
+      } else if (parsedMsg.ping) {
+        //Ignore
+      } else {
+        logger.warn("onMessage unrecognized message", data);
+      }
+    } catch(e) {
+      logger.error("onMessage", e);
+    }
+
+  }.bind(this));
+
 };
 
-TakeTurns.prototype.updateBuddyList = function () {
-  // Iterate over our roster and send over user profiles where there is at least 1 client online
-  var buddylist = {}, k, userId;
-  for (k in this.clientList) {
-    if (this.clientList.hasOwnProperty(k)) {
-      userId = this.clientList[k].userId;
-      if (this.userList[userId]) {
-        buddylist[userId] = this.userList[userId];
-      }
-    }
+TakeTurns.prototype._broadcast = function(msg) {
+  for(var k in this._clientList) {
+    if (this._clientList.hasOwnProperty(k) &&
+        this._clientList[k].status == this._social.STATUS.ONLINE) {
+      this._social.sendMessage(this._clientList[k].clientId, msg);
+    } 
   }
-  this.dispatchEvent('recv-buddylist', buddylist);
 };
 
 freedom().providePromises(TakeTurns);

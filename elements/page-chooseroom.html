@@ -2,6 +2,8 @@
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 <link rel="import" href="../bower_components/core-icon/core-icon.html">
 <link rel="import" href="../bower_components/core-icon-button/core-icon-button.html">
+<link rel="import" href="../bower_components/paper-radio-button/paper-radio-button.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 
 <polymer-element name="page-chooseroom">
 
@@ -11,31 +13,75 @@
     	border: 1px solid #ddd;
       height: 40px;
     }
+    paper-radio-button {
+    	margin-left: 5px;
+    }
+    paper-button {
+    	margin: 10px;
+    	background: #34D188;
+    }
+    label {
+    	margin-left: 10px;
+    }
+    #nickname {
+      background: {{nicknamebkg}}
+    }
+    #room {
+      background: {{roombkg}}
+    }
   </style>
 
   <core-field>
-    <input id="roomname" placeholder="Enter a Room Name" flex autofocus>
-    <core-icon-button id="proceed" icon="arrow-forward"></core-icon-button>
+    <core-icon icon="account-box"></core-icon>
+    <input id="nickname" placeholder="Enter a Nickname" flex autofocus>
   </core-field>
+  <core-field>
+    <core-icon icon="store"></core-icon>
+    <input id="room" placeholder="Enter a Room Name" flex>
+  </core-field>
+  <core-field>
+    <label>Are you the leader?</label>
+    <paper-radio-button id="leader"></paper-radio-button>
+  </core-field>
+  <paper-button id="proceed">Join</paper-button>
 </template>
 
 <script>
   Polymer({
+    nicknamebkg: "white",
+    roombkg: "white",
     ready: function() {
-    	this.$.roomname.focus();
-      this.$.roomname.onkeyup = function(e) {
-      	// Enter key
-        if (e.keyCode == 13 && this.$.roomname.value.length > 0) {
-        	window.location = window.location.href + "#" + this.$.roomname.value;
-        	window.location.reload();
+      var submit = function() {
+        if (this.$.room.value.length > 0 &&
+            this.$.nickname.value.length > 0) {
+          this.fire("join", {
+            nickname: this.$.nickname.value,
+            room: this.$.room.value,
+            leader: this.$.leader.checked
+          });
+        } else {
+          if (this.$.nickname.value.length <= 0) {
+            this.nicknamebkg = "#F0E118";
+          } else {
+            this.nicknamebkg = "white";
+          }
+          if (this.$.room.value.length <= 0) {
+            this.roombkg = "#F0E118";
+          } else {
+            this.roombkg = "white";
+          }
         }
       }.bind(this);
-      this.$.proceed.onclick = function(e) {
-        if (this.$.roomname.value.length > 0) {
-          window.location = window.location.href + "#" + this.$.roomname.value;
-        	window.location.reload();
+      var keySubmit = function(e) {
+        if (e.keyCode == 13) {
+          submit();
         }
       }.bind(this);
+    	this.$.nickname.focus();
+      this.$.proceed.onclick = submit;
+      this.$.nickname.onkeyup = keySubmit;
+      this.$.room.onkeyup = keySubmit;
+      this.$.leader.onkeyup = keySubmit;
     }
   });
 </script>
