@@ -51,8 +51,7 @@
     nicknamebkg: "white",
     roombkg: "white",
     ready: function() {
-    	this.$.nickname.focus();
-      this.$.proceed.onclick = function(e) {
+      var submit = function() {
         if (this.$.room.value.length > 0 &&
             this.$.nickname.value.length > 0) {
           this.fire("join", {
@@ -73,6 +72,16 @@
           }
         }
       }.bind(this);
+      var keySubmit = function(e) {
+        if (e.keyCode == 13) {
+          submit();
+        }
+      }.bind(this);
+    	this.$.nickname.focus();
+      this.$.proceed.onclick = submit;
+      this.$.nickname.onkeyup = keySubmit;
+      this.$.room.onkeyup = keySubmit;
+      this.$.leader.onkeyup = keySubmit;
     }
   });
 </script>
