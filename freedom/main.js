@@ -73,6 +73,9 @@ TakeTurns.prototype._boot = function () {
     this._myClientState = ret;
     this._keepalive();
     logger.log("onLogin", this._myClientState);
+    if (this._isLeader) {
+      this._leader = this._myClientState.clientId;
+    }
     if (this._myClientState.status === this._social.STATUS.ONLINE) {
       this._dispatchEvent('onState', { name: this._nickname, status: "Online" });
     } else {
@@ -129,8 +132,9 @@ TakeTurns.prototype._boot = function () {
   */
   this._social.on('onMessage', function (data) {
     logger.debug("onMessage", data);
+    console.log(data.message);
     try {
-      var parsedMsg = JSON.parse(data);
+      var parsedMsg = JSON.parse(data.message);
       if (parsedMsg.leader) {
         this._leader = parsedMsg.leader;
       } else if (parsedMsg.add && this._isLeader) {
@@ -167,10 +171,10 @@ TakeTurns.prototype._boot = function () {
 };
 
 TakeTurns.prototype._broadcast = function(msg) {
-  for(var k in this.clientList) {
-    if (this.clientList.hasOwnProperty(k) &&
-        this.clientList[k].status == this.social.STATUS.ONLINE) {
-      this.social.sendMessage(this.clientList[k].clientId, msg);
+  for(var k in this._clientList) {
+    if (this._clientList.hasOwnProperty(k) &&
+        this._clientList[k].status == this._social.STATUS.ONLINE) {
+      this._social.sendMessage(this._clientList[k].clientId, msg);
     } 
   }
 };

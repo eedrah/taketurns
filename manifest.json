@@ -25,7 +25,7 @@
       }] },
       "addToQueue": { "type": "method", "value": [] },
       "removeFromQueue": { "type": "method" , "value": [] },
-      "onQueue": { "type": "event", "value": [ { "name": "string" } ] },
+      "onQueue": { "type": "event", "value": ["array", { "name": "string" } ] },
       "onState": {"type": "event", "value": {
         "name": "string",
         "status": "string"
