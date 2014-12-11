@@ -5,7 +5,7 @@
 <link rel="import" href="../bower_components/core-header-panel/core-header-panel.html">
 <link rel="import" href="../bower_components/paper-fab/paper-fab.html">
 
-<polymer-element name="page-participate">
+<polymer-element name="page-participate" attributes="config">
 
 <template>
   <style>
@@ -65,7 +65,7 @@
 <script>
   var taketurns;
   Polymer({
-  	roomname: window.location.hash,
+    config: {},
     queue: [],
     state: {
       name: "Unknown",
@@ -105,11 +105,19 @@
         this.statuscolor = "red";
       }
     },
-    ready: function() {
+    configChanged: function(oldVal, newVal) {
+      if (typeof newVal === 'undefined' ||
+          !newVal.hasOwnProperty('nickname') || 
+          !newVal.hasOwnProperty('room') ||
+          !newVal.hasOwnProperty('leader') ||
+          typeof taketurns !== 'undefined') {
+        // Config is malformed, or we already started freedom.js
+        return;
+      }
     	this.update();
       freedom("../manifest.json", {}).then(function(TakeTurns) {
-        //console.log("freedom.js module created");
-        taketurns = new TakeTurns(window.location.hash, "Poophead");
+        console.log("freedom.js module created");
+        taketurns = new TakeTurns(this.config);
         taketurns.on("onState", function(state) {
           console.log('onState: '+JSON.stringify(state));
         	this.state = state;

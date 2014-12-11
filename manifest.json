@@ -18,7 +18,11 @@
   "default": "taketurns",
   "api": {
     "taketurns": {
-      "constructor": { "value": ["string", "string"] },
+      "constructor": { "value": [{
+        "nickname": "string", 
+        "room": "string",
+        "leader": "boolean"
+      }] },
       "addToQueue": { "type": "method", "value": [] },
       "removeFromQueue": { "type": "method" , "value": [] },
       "onQueue": { "type": "event", "value": [ { "name": "string" } ] },

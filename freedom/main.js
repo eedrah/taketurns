@@ -11,15 +11,17 @@ freedom.core().getLogger('[TakeTurns Backend]').then(function (log) {
   logger = log;
 });
 
-var TakeTurns = function (dispatchEvent, roomname, nickname) {
-  this.dispatchEvent = dispatchEvent;
-  this.roomname = roomname;
-  this.nickname = nickname;
+var TakeTurns = function (dispatchEvent, config) {
+  this._dispatchEvent = dispatchEvent;
+  this._room = config.room;
+  this.nickname = config.nickname;
+  this.isLeader = config.leader;
 
   this.social = freedom.socialprovider();
   this.userList = {};    //Keep track of the roster
   this.clientList = {};
   this.myClientState = null;
+  this.leader = null;
 
   this.queue = [];
 
@@ -40,7 +42,7 @@ TakeTurns.prototype.addToQueue = function () {
   this.queue.push({
     name: this.nickname
   });
-  this.dispatchEvent('onQueue', this.queue);
+  this._dispatchEvent('onQueue', this.queue);
   this._broadcast(JSON.stringify({ queue: this.queue }));
   return Promise.resolve();
 };
@@ -58,7 +60,7 @@ TakeTurns.prototype.removeFromQueue = function () {
     }
   }
   this.queue = newQueue;
-  this.dispatchEvent('onQueue', this.queue);
+  this._dispatchEvent('onQueue', this.queue);
   this._broadcast(JSON.stringify({ queue: this.queue }));
   return Promise.resolve();
 };
@@ -73,25 +75,34 @@ TakeTurns.prototype._broadcast = function(msg) {
   return Promise.resolve();
 };
 
+TakeTurns.prototype._keepalive = function() {
+  if (this.myClientState && this.myClientState.status &&
+      this.myClientState.status == this.social.STATUS.ONLINE) {
+    this.social.sendMessage(this.myClientState.clientId, JSON.stringify({ ping:true }));
+    setTimeout(this._keepalive.bind(this), 10000);
+  }
+};
+
 TakeTurns.prototype._boot = function () {
   this.social.login({
-    agent: 'taketurns_'+this.roomname.slice(1), //Must remove '#' or WebSockets will fail
+    agent: 'taketurns_'+this._room,
     version: '0.1',
     url: 'https://github.com/ryscheng/taketurns',
     interactive: true,
     rememberLogin: false
   }).then(function (ret) {
     this.myClientState = ret;
+    this._keepalive();
     logger.log("onLogin", this.myClientState);
     if (ret.status === this.social.STATUS.ONLINE) {
       this.nickname = ret.clientId;
-      this.dispatchEvent('onState', { name: this.nickname, status: "Online" });
+      this._dispatchEvent('onState', { name: this.nickname, status: "Online" });
     } else {
-      this.dispatchEvent('onState', { name: this.nickname, status: "Offline" });
+      this._dispatchEvent('onState', { name: this.nickname, status: "Offline" });
     }
   }.bind(this), function (err) {
     logger.log("Log In Failed", JSON.stringify(err));
-    this.dispatchEvent("onState", { name: this.nickname, status: "Error" });
+    this._dispatchEvent("onState", { name: this.nickname, status: "Error" });
   }.bind(this));
 
   /**
@@ -118,9 +129,9 @@ TakeTurns.prototype._boot = function () {
     //If mine, send to the page
     if (this.myClientState !== null && data.clientId === this.myClientState.clientId) {
       if (data.status === this.social.STATUS.ONLINE) {
-        this.dispatchEvent('onState', { name: this.nickname, status: "Online" });
+        this._dispatchEvent('onState', { name: this.nickname, status: "Online" });
       } else {
-        this.dispatchEvent('onState', { name: this.nickname, status: "Offline" });
+        this._dispatchEvent('onState', { name: this.nickname, status: "Offline" });
       }
     }
     
@@ -131,7 +142,9 @@ TakeTurns.prototype._boot = function () {
   * Just forward it to the outer page
   */
   this.social.on('onMessage', function (data) {
-    logger.info("Message Received", data);
+    console.log(data);
+    logger.debug("Message Received", data);
+
   }.bind(this));
 
 };

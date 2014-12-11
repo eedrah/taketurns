@@ -25,10 +25,10 @@
 
     <core-animated-pages  selected="{{selected}}" transitions="slide-from-right">
       <section>
-        <page-chooseroom></page-chooseroom>
+        <page-chooseroom id="chooseroom"></page-chooseroom>
       </section>
       <section>
-        <page-participate></page-participate>
+        <page-participate config="{{config}}"></page-participate>
       </section>
     </core-animated-pages>
   </div>
@@ -37,13 +37,12 @@
 <script>
   Polymer({
   	selected: 0,
+    config: {},
     ready: function() {
-      var hash = window.location.hash;
-      if (hash && hash.length && hash.length > 0) {
+      this.$.chooseroom.addEventListener("join", function(e) {
       	this.selected = 1;
-      } else {
-        this.selected = 0;
-      }
+      	this.config = e.detail;
+      }.bind(this));
     },
   });
 </script>
