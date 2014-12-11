@@ -1,14 +1,9 @@
 /*jslint sloppy:true */
 /*globals freedom */
+
 /**
  * TakeTurns demo backend.
- * Because the Social API provides message passing primitives,
- * this backend simply forwards messages between the front-end and our Social provider
- * Note that you should be able to plug-and-play a variety of social providers
- * and still have a working demo
- *
  **/
-
 // Create a logger for this module.
 // TODO: allow loggers to be made synchronously.
 var logger;
@@ -16,63 +11,95 @@ freedom.core().getLogger('[TakeTurns Backend]').then(function (log) {
   logger = log;
 });
 
-var TakeTurns = function (dispatchEvent) {
+var TakeTurns = function (dispatchEvent, roomname, nickname) {
   this.dispatchEvent = dispatchEvent;
+  this.roomname = roomname;
+  this.nickname = nickname;
 
+  this.social = freedom.socialprovider();
   this.userList = {};    //Keep track of the roster
   this.clientList = {};
   this.myClientState = null;
-  this.social = freedom.socialprovider();
 
-  this.boot();
+  this.queue = [];
+
+  this._boot();
 };
 
-/** 
- * sent messages should be forwarded to the Social provider.
- **/
-TakeTurns.prototype.send = function (to, message) {
-  return this.social.sendMessage(to, message);
+TakeTurns.prototype.addToQueue = function () {
+  if (this.myClientState.status !== this.social.STATUS.ONLINE) {
+    logger.warn("removeFromQueue", "Not online yet");
+    return Promise.reject();
+  };
+
+  for (var i=0; i<this.queue.length; i++) {
+    if (this.queue[i].name == this.nickname) {
+      return Promise.resolve();
+    }
+  }
+  this.queue.push({
+    name: this.nickname
+  });
+  this.dispatchEvent('onQueue', this.queue);
+  this._broadcast(JSON.stringify({ queue: this.queue }));
+  return Promise.resolve();
 };
 
-TakeTurns.prototype.boot = function () {
+TakeTurns.prototype.removeFromQueue = function () {
+  if (this.myClientState.status !== this.social.STATUS.ONLINE) {
+    logger.warn("removeFromQueue", "Not online yet");
+    return Promise.reject();
+  };
+
+  var newQueue = [];
+  for (var i=0; i<this.queue.length; i++) {
+    if (this.queue[i].name !== this.nickname) {
+      newQueue.push(this.queue[i]);
+    }
+  }
+  this.queue = newQueue;
+  this.dispatchEvent('onQueue', this.queue);
+  this._broadcast(JSON.stringify({ queue: this.queue }));
+  return Promise.resolve();
+};
+
+TakeTurns.prototype._broadcast = function(msg) {
+  for(var k in this.clientList) {
+    if (this.clientList.hasOwnProperty(k) &&
+        this.clientList[k].status == this.social.STATUS.ONLINE) {
+      this.social.sendMessage(this.clientList[k].clientId, msg);
+    } 
+  }
+  return Promise.resolve();
+};
+
+TakeTurns.prototype._boot = function () {
   this.social.login({
-    agent: 'chatdemo',
+    agent: 'taketurns_'+this.roomname.slice(1), //Must remove '#' or WebSockets will fail
     version: '0.1',
-    url: '',
+    url: 'https://github.com/ryscheng/taketurns',
     interactive: true,
     rememberLogin: false
   }).then(function (ret) {
     this.myClientState = ret;
     logger.log("onLogin", this.myClientState);
     if (ret.status === this.social.STATUS.ONLINE) {
-      this.dispatchEvent('recv-uid', ret.clientId);
-      this.dispatchEvent('recv-status', "online");
+      this.nickname = ret.clientId;
+      this.dispatchEvent('onState', { name: this.nickname, status: "Online" });
     } else {
-      this.dispatchEvent('recv-status', "offline");
+      this.dispatchEvent('onState', { name: this.nickname, status: "Offline" });
     }
   }.bind(this), function (err) {
-    logger.log("Log In Failed", err);
-    this.dispatchEvent("recv-err", err);
+    logger.log("Log In Failed", JSON.stringify(err));
+    this.dispatchEvent("onState", { name: this.nickname, status: "Error" });
   }.bind(this));
 
-  this.updateBuddyList();
-
-  /**
-  * on an 'onMessage' event from the Social provider
-  * Just forward it to the outer page
-  */
-  this.social.on('onMessage', function (data) {
-    logger.info("Message Received", data);
-    this.dispatchEvent('recv-message', data);
-  }.bind(this));
-  
   /**
   * On user profile changes, let's keep track of them
   **/
   this.social.on('onUserProfile', function (data) {
     //Just save it for now
     this.userList[data.userId] = data;
-    this.updateBuddyList();
   }.bind(this));
   
   /**
@@ -80,38 +107,33 @@ TakeTurns.prototype.boot = function () {
   **/
   this.social.on('onClientState', function (data) {
     logger.debug("Roster Change", data);
+    //Only track non-offline clients
     if (data.status === this.social.STATUS.OFFLINE) {
       if (this.clientList.hasOwnProperty(data.clientId)) {
         delete this.clientList[data.clientId];
       }
-    } else {  //Only track non-offline clients
+    } else {
       this.clientList[data.clientId] = data;
     }
     //If mine, send to the page
     if (this.myClientState !== null && data.clientId === this.myClientState.clientId) {
       if (data.status === this.social.STATUS.ONLINE) {
-        this.dispatchEvent('recv-status', "online");
+        this.dispatchEvent('onState', { name: this.nickname, status: "Online" });
       } else {
-        this.dispatchEvent('recv-status', "offline");
+        this.dispatchEvent('onState', { name: this.nickname, status: "Offline" });
       }
     }
     
-    this.updateBuddyList();
   }.bind(this));
-};
 
-TakeTurns.prototype.updateBuddyList = function () {
-  // Iterate over our roster and send over user profiles where there is at least 1 client online
-  var buddylist = {}, k, userId;
-  for (k in this.clientList) {
-    if (this.clientList.hasOwnProperty(k)) {
-      userId = this.clientList[k].userId;
-      if (this.userList[userId]) {
-        buddylist[userId] = this.userList[userId];
-      }
-    }
-  }
-  this.dispatchEvent('recv-buddylist', buddylist);
+  /**
+  * on an 'onMessage' event from the Social provider
+  * Just forward it to the outer page
+  */
+  this.social.on('onMessage', function (data) {
+    logger.info("Message Received", data);
+  }.bind(this));
+
 };
 
 freedom().providePromises(TakeTurns);

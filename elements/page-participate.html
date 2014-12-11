@@ -1,7 +1,9 @@
 <link rel="import" href="../bower_components/core-field/core-field.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 <link rel="import" href="../bower_components/core-icon/core-icon.html">
+<link rel="import" href="../bower_components/core-list/core-list.html">
 <link rel="import" href="../bower_components/core-header-panel/core-header-panel.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
 
 <polymer-element name="page-participate">
 
@@ -16,42 +18,114 @@
     }
     .core-body {
     	margin-top: 5px;
+    	height: 100%;
     }
     core-header-panel {
     	height: 100%;
       margin-top: 10px;
+      margin: 5px;
+    }
+    paper-fab {
+    	position: fixed;
+    	bottom: 5px;
+    	right: 5px;
+      background: {{fabcolor}};
+    }
+    #status {
+      background: {{statuscolor}};
     }
   </style>
+  <core-field id="status">
+    <core-icon icon="chevron-right"></core-icon>
+    <label>Status: {{state.status}}</label>
+  </core-field>
   <core-field>
     <core-icon icon="chevron-right"></core-icon>
     <label>Roomname: {{roomname}}</label>
   </core-field>
   <core-field>
     <core-icon icon="chevron-right"></core-icon>
-    <label>Status: {{status}}</label>
+    <label>Your Name: {{state.name}}</label>
   </core-field>
-  <core-field>
-    <core-icon icon="chevron-right"></core-icon>
-    <label>Your Username: {{username}}</label>
-  </core-field>
-    <core-header-panel flex>
-      <div class="core-header">Queue:</div>
-      <div class="core-body">
-        Content
-      </div>
-    </core-header-panel>
+  <core-header-panel flex>
+    <div class="core-header">Queue:</div>
+    <core-list id="queue" class="core-body" data="{{queue}}" selectionEnabled="true" selection="0">
+      <template>
+        <core-field class="item {{ {selected: selected} | tokenList }}">
+          <core-icon icon="face-unlock"></core-icon>
+          <label>{{index}}. {{model.name}}</label>
+        </core-field>
+      </template>
+    </core-list>
+  </core-header-panel>
+  <paper-fab id="fab" icon="{{fabicon}}"></paper-fab>
 </template>
 
 <script src="../external/freedom.js"></script>
 <script>
-  freedom("../manifest.json", {}).then(function(TakeTurns) {
-  	console.log("freedom.js module created");
-  });
+  var taketurns;
   Polymer({
   	roomname: window.location.hash,
-    status: "Connecting...",
-    username: "Unknown",
+    queue: [],
+    state: {
+      name: "Unknown",
+      status: "Connecting",
+    },
+    statuscolor: "#F0E118",
+    fabcolor: "#F0E118",
+    fabicon: "alarm",
+    update: function() {
+    	// Change Fab
+      if (this.state.status.toLowerCase() !== "online" || 
+          this.queue.indexOf(this.state.name) > 0) {
+      	this.fabcolor = "#F0E118";
+      	this.fabicon = "alarm";
+        this.$.fab.onclick = function(e) {};
+      } else if (this.queue.length > 0 && this.queue[0].name &&
+                  this.queue[0].name == this.state.name) {
+        this.fabcolor = "#C70000";
+        this.fabicon = "close";
+        this.$.fab.onclick = function(e) {
+        	taketurns.removeFromQueue();
+        };
+      } else {
+        this.fabcolor = "green";
+        this.fabicon = "add";
+        this.$.fab.onclick = function(e) {
+        	taketurns.addToQueue();
+        };
+      }
+
+      // Change status bar
+      if (this.state.status.toLowerCase() == "online") {
+      	this.statuscolor = "white";
+      } else if (this.state.status.toLowerCase() == "connecting") {
+        this.statuscolor = "#F0E118";
+      } else {
+        this.statuscolor = "red";
+      }
+    },
     ready: function() {
+    	this.update();
+      freedom("../manifest.json", {}).then(function(TakeTurns) {
+        //console.log("freedom.js module created");
+        taketurns = new TakeTurns(window.location.hash, "Poophead");
+        taketurns.on("onState", function(state) {
+          console.log('onState: '+JSON.stringify(state));
+        	this.state = state;
+        	this.update();
+        }.bind(this))
+        taketurns.on("onQueue", function(queue) {
+          // Bug with conform returns [null] instead of []
+          while(queue.length > 0 && 
+                (queue[0] === null || typeof queue[0] === "undefined")) { 
+            queue = queue.slice(1); 
+          }
+          console.log('onQueue: '+JSON.stringify(queue));
+          this.queue = queue;
+          this.update();
+        }.bind(this));
+      }.bind(this));
     }
   });
 </script>

@@ -18,8 +18,14 @@
   "default": "taketurns",
   "api": {
     "taketurns": {
-      "send": {"type": "method", "value": ["string", "string"]},
-      "recv-err": {"type": "event", "value": {"message": "string"}}
+      "constructor": { "value": ["string", "string"] },
+      "addToQueue": { "type": "method", "value": [] },
+      "removeFromQueue": { "type": "method" , "value": [] },
+      "onQueue": { "type": "event", "value": [ { "name": "string" } ] },
+      "onState": {"type": "event", "value": {
+        "name": "string",
+        "status": "string"
+      }}
     }
   }
 }
