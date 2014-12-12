@@ -130,7 +130,7 @@
         console.log("freedom.js module created");
         taketurns = new TakeTurns(this.config);
         taketurns.on("onState", function(state) {
-          console.log('onState: '+JSON.stringify(state));
+          //console.log('onState: '+JSON.stringify(state));
         	this.state = state;
         	this.update();
         }.bind(this))
@@ -140,7 +140,7 @@
                 (queue[0] === null || typeof queue[0] === "undefined")) { 
             queue = queue.slice(1); 
           }
-          console.log('onQueue: '+JSON.stringify(queue));
+          //console.log('onQueue: '+JSON.stringify(queue));
           this.queue = queue;
           this.update();
         }.bind(this));

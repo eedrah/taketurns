@@ -37,7 +37,9 @@ TakeTurns.prototype.addToQueue = function () {
     logger.warn("addToQueue:", "Unknown leader");
     return Promise.reject();
   }
-  this._social.sendMessage(this._leader, JSON.stringify({ add: this._nickname }))
+  this._social.sendMessage(this._leader, JSON.stringify({ 
+    add: { name: this._nickname, clientId: this._myClientState.clientId }
+  }));
   return Promise.resolve();
 };
 
@@ -50,7 +52,9 @@ TakeTurns.prototype.removeFromQueue = function () {
     logger.warn("removeFromQueue:", "Unknown leader");
     return Promise.reject();
   }
-  this._social.sendMessage(this._leader, JSON.stringify({ remove: this._nickname }))
+  this._social.sendMessage(this._leader, JSON.stringify({ 
+    remove: { name: this._nickname, clientId: this._myClientState.clientId } 
+  }));
   return Promise.resolve();
 };
 
@@ -75,6 +79,7 @@ TakeTurns.prototype._boot = function () {
     logger.log("onLogin", this._myClientState);
     if (this._isLeader) {
       this._leader = this._myClientState.clientId;
+      this._broadcast(JSON.stringify({ leader:this._myClientState.clientId }));
     }
     if (this._myClientState.status === this._social.STATUS.ONLINE) {
       this._dispatchEvent('onState', { name: this._nickname, status: "Online" });
@@ -104,6 +109,15 @@ TakeTurns.prototype._boot = function () {
       if (this._clientList.hasOwnProperty(data.clientId)) {
         delete this._clientList[data.clientId];
       }
+      // Remove this user from the queue if present
+      var newQueue = [];
+      for (var i=0; i<this._queue.length; i++) {
+        if (this._queue[i].clientId !== data.clientId) {
+          newQueue.push(this._queue[i]);
+        }
+      }
+      this._queue = newQueue;
+      this._dispatchEvent('onQueue', this._queue);
     } else {
       this._clientList[data.clientId] = data;
     }
@@ -122,6 +136,13 @@ TakeTurns.prototype._boot = function () {
         this._myClientState.status === this._social.STATUS.ONLINE &&
         this._isLeader) {
       this._social.sendMessage(data.clientId, JSON.stringify({ leader:this._myClientState.clientId }));
+      this._social.sendMessage(data.clientId, JSON.stringify({ queue: this._queue }));
+    }
+    // Clear queue if leader left
+    if (data.clientId == this._leader &&
+        data.status === this._social.STATUS.OFFLINE) {
+      this._queue = [];
+      this._dispatchEvent('onQueue', this._queue);
     }
     
   }.bind(this));
@@ -139,16 +160,16 @@ TakeTurns.prototype._boot = function () {
         this._leader = parsedMsg.leader;
       } else if (parsedMsg.add && this._isLeader) {
         for (var i=0; i<this._queue.length; i++) {
-          if (this._queue[i].name == parsedMsg.add) {
+          if (this._queue[i].name == parsedMsg.add.name) {
             return;
           }
         }
-        this._queue.push({ name: parsedMsg.add });
+        this._queue.push(parsedMsg.add);
         this._broadcast(JSON.stringify({ queue: this._queue }));
       } else if (parsedMsg.remove && this._isLeader) {
         var newQueue = [];
         for (var i=0; i<this._queue.length; i++) {
-          if (this._queue[i].name !== parsedMsg.remove) {
+          if (this._queue[i].name !== parsedMsg.remove.name) {
             newQueue.push(this._queue[i]);
           }
         }
