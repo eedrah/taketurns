@@ -18475,14 +18475,14 @@ mode: cover
   </core-field>
   <core-header-panel flex="">
     <div class="core-header">Queue:</div>
-    <core-list id="queue" class="core-body" data="{{queue}}" selectionenabled="true" selection="0">
-      <template>
-        <core-field class="item {{ {selected: selected} | tokenList }}">
+    <div class="core-body">
+      <template repeat="{{model, index in queue}}">
+        <core-field>
           <core-icon icon="face-unlock"></core-icon>
           <label>{{index}}. {{model.name}}</label>
         </core-field>
       </template>
-    </core-list>
+    </div>
   </core-header-panel>
   <paper-fab id="fab" icon="{{fabicon}}"></paper-fab>
 </template>
@@ -18490,6 +18490,7 @@ mode: cover
 <script>
   var taketurns;
   Polymer('page-participate',{
+  	isReady: false,
     config: {},
     queue: [],
     state: {
@@ -18536,13 +18537,18 @@ mode: cover
         this.statuscolor = "red";
       }
     },
+    ready: function() {
+    	this.isReady = true;
+      this.configChanged({}, this.config);
+    },
     configChanged: function(oldVal, newVal) {
       if (typeof newVal === 'undefined' ||
           !newVal.hasOwnProperty('nickname') || 
           !newVal.hasOwnProperty('room') ||
           !newVal.hasOwnProperty('leader') ||
-          typeof taketurns !== 'undefined') {
-        // Config is malformed, or we already started freedom.js
+          typeof taketurns !== 'undefined' ||
+          !this.isReady) {
+        // Config is malformed, or we already started freedom.js, or not ready
         return;
       }
     	this.update();
