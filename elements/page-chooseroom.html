@@ -1,6 +1,7 @@
 <link rel="import" href="../bower_components/core-field/core-field.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 <link rel="import" href="../bower_components/core-icon/core-icon.html">
+<link rel="import" href="../bower_components/core-overlay/core-overlay.html">
 <link rel="import" href="../bower_components/core-icon-button/core-icon-button.html">
 <link rel="import" href="../bower_components/paper-radio-button/paper-radio-button.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
@@ -18,7 +19,7 @@
     }
     paper-button {
     	margin: 10px;
-    	background: #34D188;
+    	background: #D1D1D1;
     }
     label {
     	margin-left: 10px;
@@ -28,6 +29,11 @@
     }
     #room {
       background: {{roombkg}}
+    }
+    core-overlay {
+      background: white;
+      padding: 40px;
+    	border: 1px solid #ddd;
     }
   </style>
 
@@ -44,10 +50,26 @@
     <paper-radio-button id="leader"></paper-radio-button>
   </core-field>
   <paper-button id="proceed">Join</paper-button>
+  <paper-button id="about">About</paper-button>
+  <core-overlay id="overlay" opened="{{overlay}}">
+    <h2>About Take Turns, Sally.</h2>
+    <div>
+      Take Turns is a simple queuing system. <br>
+      Simply choose a nickname and a roomname to join. <br>
+      Users will be displayed in the speaking order. <br>
+      <br><br>
+      Note: There can only be 1 leader per room. <br>
+      Green = Add yourself to the queue <br>
+      Yellow = Wait for your turn <br>
+      Red = Signal that you're done talking <br>
+    </div>
+    <paper-button core-overlay-toggle>OK</button>
+  <core-overlay>
 </template>
 
 <script>
   Polymer({
+  	overlay: false,
     nicknamebkg: "white",
     roombkg: "white",
     ready: function() {
@@ -82,6 +104,9 @@
       this.$.nickname.onkeyup = keySubmit;
       this.$.room.onkeyup = keySubmit;
       this.$.leader.onkeyup = keySubmit;
+      this.$.about.onclick = function() {
+      	this.overlay = true;
+      }.bind(this);
     }
   });
 </script>
