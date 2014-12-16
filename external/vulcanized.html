@@ -12848,6 +12848,12 @@ Polymer.CoreFocusable = {
 
 
 
+
+
+
+
+
+
 </head><body><div hidden="">
 
 <polymer-element name="core-selection" attributes="multi" hidden="" assetpath="../bower_components/core-selection/">
@@ -17727,8 +17733,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       Source code: <a href="https://github.com/ryscheng/taketurns">https://github.com/ryscheng/taketurns</a>
     </div>
     <paper-button core-overlay-toggle="">OK
-  <core-overlay>
-</core-overlay></paper-button></core-overlay></template>
+  </paper-button></core-overlay>
+</template>
 
 <script>
   Polymer('page-chooseroom',{
@@ -19327,6 +19333,227 @@ mode: cover
 
   </script>
 </polymer-element>
+
+<polymer-element name="core-range" attributes="value min max step ratio" assetpath="../bower_components/core-range/">
+<script>
+
+  Polymer('core-range', {
+    
+    /**
+     * The number that represents the current value.
+     *
+     * @attribute value
+     * @type number
+     * @default 0
+     */
+    value: 0,
+    
+    /**
+     * The number that indicates the minimum value of the range.
+     *
+     * @attribute min
+     * @type number
+     * @default 0
+     */
+    min: 0,
+    
+    /**
+     * The number that indicates the maximum value of the range.
+     *
+     * @attribute max
+     * @type number
+     * @default 100
+     */
+    max: 100,
+    
+    /**
+     * Specifies the value granularity of the range's value.
+     *
+     * @attribute step
+     * @type number
+     * @default 1
+     */
+    step: 1,
+    
+    /**
+     * Returns the ratio of the value.
+     *
+     * @attribute ratio
+     * @type number
+     * @default 0
+     */
+    ratio: 0,
+    
+    observe: {
+      'value min max step': 'update'
+    },
+    
+    calcRatio: function(value) {
+      return (this.clampValue(value) - this.min) / (this.max - this.min);
+    },
+    
+    clampValue: function(value) {
+      return Math.min(this.max, Math.max(this.min, this.calcStep(value)));
+    },
+    
+    calcStep: function(value) {
+      return this.step ? (Math.round(value / this.step) / (1 / this.step)) : value;
+    },
+    
+    validateValue: function() {
+      var v = this.clampValue(this.value);
+      this.value = this.oldValue = isNaN(v) ? this.oldValue : v;
+      return this.value !== v;
+    },
+    
+    update: function() {
+      this.validateValue();
+      this.ratio = this.calcRatio(this.value) * 100;
+    }
+    
+  });
+  
+</script>
+</polymer-element>
+<polymer-element name="paper-progress" extends="core-range" attributes="secondaryProgress indeterminate" assetpath="../bower_components/paper-progress/">
+
+  <template>
+  
+    <style>/*
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+*/
+
+:host {
+  display: inline-block;
+  width: 200px;
+  height: 4px;
+}
+
+#progressContainer {
+  position: relative;
+  height: 100%;
+  background-color: #c8c8c8;
+  overflow: hidden;
+}
+
+#activeProgress,
+#secondaryProgress {
+  -webkit-transform-origin: left center;
+  transform-origin: left center;
+  -webkit-transform: scaleX(0);
+  transform: scaleX(0);
+}
+
+#activeProgress {
+  background-color: #0f9d58;
+}
+
+#secondaryProgress {
+  background-color: #87ceac;
+}
+
+#activeProgress.indeterminate {
+  -webkit-transform-origin: center center;
+  transform-origin: center center;
+  -webkit-animation: indeterminate-bar 1s linear infinite;
+  animation: indeterminate-bar 1s linear infinite;
+}
+
+@-webkit-keyframes indeterminate-bar {
+  0% {
+    -webkit-transform: translate(-50%) scaleX(0);
+  }
+  50% {
+    -webkit-transform: translate(0%) scaleX(0.3);
+  }
+  100% {
+    -webkit-transform: translate(50%) scaleX(0);
+  }
+}
+
+@keyframes indeterminate-bar {
+  0% {
+    transform: translate(-50%) scaleX(0);
+  }
+  50% {
+    transform: translate(0%) scaleX(0.3);
+  }
+  100% {
+    transform: translate(50%) scaleX(0);
+  }
+}
+</style>
+  
+    <div id="progressContainer" role="progressbar" aria-valuenow="{{value}}" aria-valuemin="{{min}}" aria-valuemax="{{max}}">
+    
+      <div id="secondaryProgress" fit=""></div>
+      <div id="activeProgress" fit=""></div>
+      
+    </div>
+    
+  </template>
+  
+  <script>
+  
+    Polymer('paper-progress', {
+      
+      /**
+       * The number that represents the current secondary progress.
+       *
+       * @attribute secondaryProgress
+       * @type number
+       * @default 0
+       */
+      secondaryProgress: 0,
+      
+      /**
+       * Use an indeterminate progress indicator.
+       *
+       * @attribute indeterminate
+       * @type boolean
+       * @default false
+       */
+      indeterminate: false,
+
+      step: 0,
+      
+      observe: {
+        'value secondaryProgress min max indeterminate': 'update'
+      },
+      
+      update: function() {
+        this.super();
+        this.secondaryProgress = this.clampValue(this.secondaryProgress);
+        this.secondaryRatio = this.calcRatio(this.secondaryProgress) * 100;
+
+        // If we use attribute/class binding, the animation sometimes doesn't translate properly
+        // on Safari 7.1. So instead, we toggle the class here in the update method.
+        this.$.activeProgress.classList.toggle('indeterminate', this.indeterminate);
+      },
+
+      transformProgress: function(progress, ratio) {
+        var transform = 'scaleX(' + (ratio / 100) + ')';
+        progress.style.transform = progress.style.webkitTransform = transform;
+      },
+
+      ratioChanged: function() {
+        this.transformProgress(this.$.activeProgress, this.ratio);
+      },
+
+      secondaryRatioChanged: function() {
+        this.transformProgress(this.$.secondaryProgress, this.secondaryRatio);
+      }
+      
+    });
+    
+  </script>
+  
+</polymer-element>
 <polymer-element name="page-participate" attributes="config" assetpath="../elements/">
 
 <template>
@@ -19352,6 +19579,11 @@ mode: cover
     	bottom: 5px;
     	right: 5px;
       background: {{fabcolor}};
+    }
+    core-overlay {
+      background: white;
+      padding: 40px;
+    	border: 1px solid #ddd;
     }
     #status {
       background: {{statuscolor}};
@@ -19380,6 +19612,12 @@ mode: cover
       </template>
     </div>
   </core-header-panel>
+  &lt;&gt;
+  <core-overlay id="overlay" opened="{{overlay}}">
+    <h2>Seconds Left: {{timer}}</h2>
+    <paper-progress value="{{timerProgress}}"></paper-progress>
+  </core-overlay>
+
   <paper-fab id="fab" icon="{{fabicon}}"></paper-fab>
 </template>
 
@@ -19396,6 +19634,25 @@ mode: cover
     statuscolor: "#F0E118",
     fabcolor: "#F0E118",
     fabicon: "alarm",
+  	overlay: false,
+  	timer: 0,
+  	timerProgress: 0,
+    showTimer: function(timeLeft) {
+      if (this.queue.length > 0 && this.queue[0].name &&
+          this.queue[0].name == this.state.name) {
+        if (timeLeft > 0) { // Update timer
+          this.overlay = true;
+          this.timerProgress = timeLeft * 100 / 30;
+          this.timer = timeLeft;
+          setTimeout(this.showTimer.bind(this, (timeLeft-1)), 1000);
+        } else { // Time's up
+        	taketurns.removeFromQueue();
+        }
+      } else { // Already off the queue
+        this.overlay = false;
+      }
+
+    },
     update: function() {
     	// Change Fab
       var findName = function(arr, name) {
@@ -19409,6 +19666,7 @@ mode: cover
       	this.fabcolor = "#F0E118";
       	this.fabicon = "alarm";
         this.$.fab.onclick = function(e) {};
+        this.overlay = false;
       } else if (this.queue.length > 0 && this.queue[0].name &&
                   this.queue[0].name == this.state.name) {
         this.fabcolor = "#C70000";
@@ -19416,12 +19674,16 @@ mode: cover
         this.$.fab.onclick = function(e) {
         	taketurns.removeFromQueue();
         };
+        if (!this.overlay) {
+          this.showTimer(30);
+        }
       } else {
         this.fabcolor = "green";
         this.fabicon = "add";
         this.$.fab.onclick = function(e) {
         	taketurns.addToQueue();
         };
+        this.overlay = false;
       }
 
       // Change status bar
